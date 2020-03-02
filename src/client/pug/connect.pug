@@ -1,0 +1,12 @@
+extends template/main.pug
+
+block content
+    .container  
+        .connect
+            .item
+                input#url(type='text', placeholder='Url...')
+            .item
+                button#connect Connect
+
+block script
+    script(src='/public/js/connect.js')
