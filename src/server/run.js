@@ -3,7 +3,7 @@ const qrcode = require('qrcode-terminal')
 
 const server = new Server({
   port: 3333,
-  log: false
+  log: true
 })
 
 server.start().then(() => {

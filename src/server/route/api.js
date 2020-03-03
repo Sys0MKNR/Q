@@ -36,12 +36,16 @@ module.exports = function route (fastify, opts, next) {
       return
     }
 
-    const cropType = fastify.$server.CROP_TYPES[request.cropType]
+    const cropType = fastify.$server.CROP_TYPES[request.body.cropType]
 
     let tempImg = Buffer.from(fastify.$server.img)
 
     if (cropType) {
-      tempImg = await sharp(tempImg).extract(cropType).toBuffer()
+      try {
+        tempImg = await sharp(tempImg).extract(cropType).toBuffer()
+      } catch (error) {
+
+      }
     }
 
     reply

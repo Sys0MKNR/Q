@@ -67,11 +67,15 @@ function getImg () {
 
     try {
       const res = await fetch('/api/img', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+        // body: JSON.stringify({ cropType: 'OW_STD' })
       })
 
       const json = await res.json()
-      console.log(json.data)
+      console.log({ image_response: json.data })
       _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
       resetTries()
     } catch (error) {

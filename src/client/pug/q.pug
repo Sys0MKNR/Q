@@ -1,12 +1,11 @@
 extends template/main.pug
 
-block content
-    .toolbar
-        button#toggle.tool-btn Stop
-        button#exit.tool-btn Exit
-    .container
+block content    
+    .container.q
+        .toolbar
+            button#toggle.tool-btn Stop
+            button#exit.tool-btn Exit
         .imgContainer
             img#img
-
 block script
     script(src='/public/js/q.js')
