@@ -3,8 +3,10 @@ extends template/main.pug
 block content    
     .container.q
         .toolbar
-            button#toggle.tool-btn Stop
-            button#exit.tool-btn Exit
+            button#toggle.tb-item Stop
+            button#exit.tb-item Exit
+            select#cropTypes.tb-item
+            
         .imgContainer
             img#img
 block script

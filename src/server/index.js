@@ -76,6 +76,11 @@ class Server {
     this.server.decorateRequest('$server', this)
     this.log = this.server.log
 
+    this.server.register(require('fastify-rate-limit'), {
+      max: 100,
+      timeWindow: '1 minute'
+    })
+
     this.server.register(require('fastify-sensible'))
 
     this.server.register(require('fastify-helmet'))

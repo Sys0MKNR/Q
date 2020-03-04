@@ -12,7 +12,8 @@ module.exports = function route (fastify, opts, next) {
     fastify.$server.scActive = true
     reply
       .send({
-        scActive: fastify.$server.scActive
+        scActive: fastify.$server.scActive,
+        cropTypes: Object.keys(fastify.$server.CROP_TYPES)
       })
   })
 
@@ -32,24 +33,24 @@ module.exports = function route (fastify, opts, next) {
   })
 
   fastify.post('/img', async (request, reply) => {
-    if (!fastify.$server.img) {
-      return
-    }
-
-    const cropType = fastify.$server.CROP_TYPES[request.body.cropType]
-
-    let tempImg = Buffer.from(fastify.$server.img)
-
-    if (cropType) {
-      try {
-        tempImg = await sharp(tempImg).extract(cropType).toBuffer()
-      } catch (error) {
-
+    try {
+      if (!fastify.$server.img) {
+        return
       }
-    }
 
-    reply
-      .send({ data: tempImg.toString('base64') })
+      const cropType = fastify.$server.CROP_TYPES[request.body.cropType]
+
+      let tempImg = Buffer.from(fastify.$server.img)
+
+      if (cropType) {
+        tempImg = await sharp(tempImg).extract(cropType).toBuffer()
+      }
+
+      reply
+        .send({ data: tempImg.toString('base64') })
+    } catch (error) {
+      console.error(error)
+    }
   })
 
   next()

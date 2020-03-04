@@ -1,19 +1,33 @@
 let _imageLoader
 let _loadImage = false
 let _img
-const _interval = 1000
+let _interval = 1000
 let _toggleBtn
 let _tries = 5
+let _cropTypeSelect
+let _cropType = 'FULL'
 
 window.addEventListener('DOMContentLoaded', async event => {
   const res = await fetch('/api/init')
-  const { scActive, url, interval } = await res.json()
+  const { scActive, url, interval, cropTypes } = await res.json()
 
-  console.log({ scActive, url, interval })
+  console.log({ scActive, url, interval, cropTypes })
 
   _loadImage = scActive
+  _interval = interval || 1000
   _toggleBtn = document.getElementById('toggle')
   _toggleBtn.textContent = toggleButtonText()
+  _cropTypeSelect = document.getElementById('cropTypes')
+
+  _cropTypeSelect.addEventListener('change', e => {
+    _cropType = e.target.value
+  })
+
+  cropTypes.forEach(x => {
+    const option = document.createElement('option')
+    option.text = x
+    _cropTypeSelect.add(option)
+  })
 
   _toggleBtn.addEventListener('click', async e => {
     setStatus(!_loadImage)
@@ -70,14 +84,17 @@ function getImg () {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
-        // body: JSON.stringify({ cropType: 'OW_STD' })
+        },
+        body: JSON.stringify({ cropType: _cropType })
       })
 
       const json = await res.json()
-      console.log({ image_response: json.data })
-      _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
-      resetTries()
+
+      if (res.status === 200) {
+        console.log({ image_response: json.data })
+        _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
+        resetTries()
+      }
     } catch (error) {
       _tries--
       console.error(error)
