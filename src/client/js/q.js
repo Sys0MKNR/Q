@@ -41,7 +41,7 @@ window.addEventListener('DOMContentLoaded', async event => {
         body: JSON.stringify({ scActive: _loadImage })
       })
 
-      const data = await res.status()
+      // const data = await res.status()
     } catch (error) {
       console.error(error)
     }
@@ -55,7 +55,7 @@ window.addEventListener('DOMContentLoaded', async event => {
 
   _img = document.getElementById('img')
 
-  _imageLoader = getImg()
+  _imageLoader = getImgWorker()
 })
 
 function setStatus (newStatus) {
@@ -65,41 +65,43 @@ function setStatus (newStatus) {
 
   if (_loadImage) {
     resetTries()
-    _imageLoader = getImg()
+    _imageLoader = getImgWorker()
   } else clearInterval(_imageLoader)
 }
 
-function getImg () {
-  return setInterval(async () => {
-    console.log(_tries)
-    if (!_loadImage) return
+function getImgWorker () {
+  getImg()
+  return setInterval(getImg, _interval)
+}
 
-    if (_tries <= 0) {
-      setStatus(false)
-      return
-    }
+async function getImg () {
+  if (!_loadImage) return
 
-    try {
-      const res = await fetch('/api/img', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ cropType: _cropType })
-      })
+  if (_tries <= 0) {
+    setStatus(false)
+    return
+  }
 
-      const json = await res.json()
+  try {
+    const res = await fetch('/api/img', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ cropType: _cropType })
+    })
 
-      if (res.status === 200) {
-        console.log({ image_response: json.data })
-        _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
-        resetTries()
-      }
-    } catch (error) {
-      _tries--
-      console.error(error)
-    }
-  }, _interval)
+    const json = await res.json()
+
+    console.log(res.status)
+    if (res.status === 200) {
+      _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
+      resetTries()
+    } else { throw new Error('not 200') }
+  } catch (error) {
+    _tries--
+    console.error(error)
+  }
 }
 
 function resetTries () {

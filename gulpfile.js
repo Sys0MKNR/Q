@@ -8,24 +8,24 @@ const minifyCSS = require('gulp-csso')
 const uglify = require('gulp-terser')
 const gulpCopy = require('gulp-copy')
 const del = require('del')
+const { exec } = require('pkg')
 
-const basePath = 'dist'
+const basePath = 'build'
 const publicPath = path.join(basePath, 'public')
 
-function clean () {
-  return del([
+async function clean () {
+  await del([
     basePath
   ])
+}
+
+async function pkg () {
+  await exec(['package.json', '--target', 'win', '--output', 'dist/q.exe'])
 }
 
 function server () {
   return src('src/server/**/*')
     .pipe(gulpCopy(basePath, { prefix: 2 }))
-}
-
-async function client (cb) {
-  parallel(html, css, js, font)()
-  cb()
 }
 
 function html () {
@@ -53,9 +53,6 @@ function font () {
 }
 
 exports.clean = clean
-
-exports.js = js
-exports.css = css
-exports.html = html
-exports.client = client
-exports.default = series(clean, server, client)
+exports.client = parallel(html, css, js, font)
+exports.build = series(clean, server, exports.client)
+exports.default = series(exports.build, pkg)

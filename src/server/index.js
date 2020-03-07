@@ -7,8 +7,11 @@ const fastify = require('fastify')
 const ip = require('ip')
 const selfsigned = require('selfsigned')
 const fs = require('fs-extra')
+const envPaths = require('env-paths')
 
 const randomBytes = util.promisify(crypto.randomBytes)
+
+const paths = envPaths('Q')
 
 const PORT = 3333
 const INTERVALL = 1000
@@ -22,10 +25,7 @@ class Server {
   constructor (opts) {
     const {
       port,
-      log = true,
-      basePath,
-      keyPath,
-      certPath
+      log = true
     } = opts
 
     this.port = parseInt(port) || PORT
@@ -37,9 +37,9 @@ class Server {
     this.scActive = false
     this.CROP_TYPES = CROP_TYPES
 
-    this.basePath = basePath || path.join(process.cwd(), 'res')
-    this.keyPath = keyPath || path.join(this.basePath, 'key.key')
-    this.certPath = certPath || path.join(this.basePath, 'key.cert')
+    this.paths = paths
+    this.binaryPath = path.join(this.paths.data, 'bin')
+    this.httpsPath = path.join(this.paths.data, 'https')
   }
 
   async sc () {
@@ -53,7 +53,29 @@ class Server {
     }
   }
 
-  initSc () {
+  async initSc () {
+    // if (process.pkg) {
+    await fs.ensureDir(this.binaryPath)
+
+    const files = [
+      'screenCapture_1.3.2.bat',
+      'app.manifest'
+    ]
+
+    const oldBinaryPath = path.resolve('node_modules/screenshot-desktop/lib/win32')
+
+    files.forEach(async file => {
+      const oldPath = path.join(oldBinaryPath, file)
+      const newPath = path.join(this.binaryPath, file)
+
+      if (!(await fs.pathExists(newPath))) {
+        await copy(oldPath, newPath)
+      }
+    })
+
+    screenshot.setCWD(this.binaryPath)
+    // }
+
     if (this.scs) { clearInterval(this.scs) }
     this.scs = setInterval(this.sc.bind(this), this.intervall)
   }
@@ -72,6 +94,7 @@ class Server {
         cert: this.keys.cert
       }
     })
+
     this.server.decorate('$server', this)
     this.server.decorateRequest('$server', this)
     this.log = this.server.log
@@ -99,8 +122,6 @@ class Server {
       prefix: '/public/'
     })
 
-    // this.server.register(require('./guard'))
-
     this.server.decorateRequest('$validUser', null)
 
     this.server.addHook('preHandler', (request, reply, done) => {
@@ -111,7 +132,6 @@ class Server {
     })
 
     this.server.register(require('./route/q'), { prefix: '/q' })
-
     this.server.register(require('./route/api'), { prefix: '/api' })
 
     this.server.setNotFoundHandler((request, reply) => {
@@ -133,7 +153,9 @@ class Server {
   }
 
   async start () {
-    this.initSc()
+    await fs.ensureDir(this.paths.data)
+
+    await this.initSc()
     await this.initServer()
 
     try {
@@ -146,24 +168,27 @@ class Server {
   }
 
   async createKeysAndCert () {
+    await fs.ensureDir(path.join(this.httpsPath))
+
+    const keyPath = path.join(this.httpsPath, 'https.key')
+    const certPath = path.join(this.httpsPath, 'https.cert')
+
     let key
     let cert
 
-    const keysExist = await fs.pathExists(this.keyPath) && await fs.pathExists(this.certPath)
+    const keysExist = await fs.pathExists(keyPath) && await fs.pathExists(certPath)
 
     if (keysExist) {
-      key = await fs.readFile(this.keyPath)
-      cert = await fs.readFile(this.certPath)
+      key = await fs.readFile(keyPath)
+      cert = await fs.readFile(certPath)
     } else {
-      await fs.ensureDir(this.basePath)
-
       const result = await this.createSelfSignedCert()
 
       key = result.key
       cert = result.cert
 
-      await fs.writeFile(this.keyPath, key)
-      await fs.writeFile(this.certPath, cert)
+      await fs.writeFile(keyPath, key)
+      await fs.writeFile(certPath, cert)
     }
 
     return { key, cert }
@@ -191,3 +216,7 @@ class Server {
 }
 
 module.exports = exports = Server
+
+async function copy (source, target) {
+  fs.createReadStream(source).pipe(fs.createWriteStream(target))
+}

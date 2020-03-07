@@ -4,12 +4,15 @@
   "description": "q watcher for ow",
   "main": "index.js",
   "scripts": {
-    "serve": "npx gulp && node dist/run.js",
-    "start": "node dist/run.js"
+    "serve": "npx gulp && node build/run.js",
+    "serve-exe": "npx gulp && node build/run.js",
+    "start": "node dist/run.js",
+    "start-exe": "node dist/run.js"
   },
   "author": "MSz",
   "license": "MIT",
   "dependencies": {
+    "env-paths": "^2.2.0",
     "fastify": "^2.11.0",
     "fastify-helmet": "^3.0.2",
     "fastify-rate-limit": "^3.0.1",
@@ -20,7 +23,7 @@
     "fs-extra": "^8.1.0",
     "ip": "^1.1.5",
     "qrcode-terminal": "^0.12.0",
-    "screenshot-desktop": "^1.10.0",
+    "screenshot-desktop": "github:Sys0MKNR/screenshot-desktop",
     "selfsigned": "^1.10.7",
     "sharp": "^0.23.4"
   },
@@ -39,6 +42,14 @@
     "gulp-pug": "^4.0.1",
     "gulp-sass": "^4.0.2",
     "gulp-terser": "^1.2.0",
-    "gulp-uglify": "^3.0.2"
-  }
+    "gulp-uglify": "^3.0.2",
+    "pkg": "^4.4.4"
+  },
+  "pkg": {
+    "assets": [ 
+      "node_modules/sodium-native/prebuilds/**/*",
+      "build/public/**/*"
+     ]
+  },
+  "bin": "build/run.js"
 }
