@@ -13,7 +13,7 @@ const randomBytes = util.promisify(crypto.randomBytes)
 
 const paths = envPaths('Q', { suffix: '' })
 
-const PORT = 3333
+const PORT = 36111
 const INTERVAL = 1000
 
 const CROP_TYPES = {

@@ -1,10 +1,16 @@
 const Server = require('./index.js')
 const qrcode = require('qrcode-terminal')
 const program = require('commander')
+const pkginfo = require('pkginfo')(module, 'version', 'repository')
+
+const { version, repository } = module.exports
+
+module.exports = null
 
 program
+  .version(version)
   .option('-d, --debug', 'output extra debugging')
-  .option('-p, --port <port>', 'port')
+  .option('-p, --port <port>', 'the used server port')
 
 program.parse(process.argv)
 
@@ -14,9 +20,11 @@ const server = new Server({
 })
 
 server.start().then(() => {
+  console.log('Version: ' + version)
   console.log('Server started at: ' + server.url)
   console.log('direct connect url: ' + server.connectUrl)
   qrcode.generate(server.connectUrl, { small: true })
+  console.log('source code: ' + repository.url)
 }).catch(err => {
   console.error(err)
 })
