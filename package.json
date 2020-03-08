@@ -1,6 +1,6 @@
 {
   "name": "q",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "description": "q watcher for ow",
   "scripts": {
     "build": "npx gulp build",
