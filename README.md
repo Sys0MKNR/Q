@@ -1,6 +1,5 @@
 # Q
-Watch ur screen in the browser on ur LAN. Intended to enable doing other stuff while queueing for a game. 
-
+Watch ur screen in the browser on ur LAN. Made because Overwatch queue times are just too long. 
 
 # Usage
 > q.exe [OPTIONS]
@@ -13,9 +12,10 @@ Run the q.exe. And connect by:
 
 # Options
 
-* `-d, --debug` output extra debugging
-* `-p, --port <port>` the used server port
-
+* `-V, --version`       output the version number
+* `-d, --debug`         output extra debugging
+* `-p, --port <port>`   the used server port
+* `-h, --help`          output usage information
 
 
 # Info
