@@ -13,7 +13,8 @@ module.exports = function route (fastify, opts, next) {
     reply
       .send({
         scActive: fastify.$server.scActive,
-        cropTypes: Object.keys(fastify.$server.CROP_TYPES)
+        cropTypes: Object.keys(fastify.$server.CROP_TYPES),
+        interval: fastify.$server.interval
       })
   })
 
@@ -29,6 +30,9 @@ module.exports = function route (fastify, opts, next) {
   })
 
   fastify.post('/exit', async (request, reply) => {
+    reply
+      .send('ok')
+
     process.exit()
   })
 

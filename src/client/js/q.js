@@ -9,6 +9,9 @@ let _cropType = 'FULL'
 
 window.addEventListener('DOMContentLoaded', async event => {
   const res = await fetch('/api/init')
+
+  if (res.status !== 200) { return }
+
   const { scActive, url, interval, cropTypes } = await res.json()
 
   console.log({ scActive, url, interval, cropTypes })
@@ -33,22 +36,21 @@ window.addEventListener('DOMContentLoaded', async event => {
     setStatus(!_loadImage)
 
     try {
-      const res = await fetch('/api/status', {
+      await fetch('/api/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ scActive: _loadImage })
       })
-
-      // const data = await res.status()
     } catch (error) {
+      setStatus(false)
       console.error(error)
     }
   })
 
   document.getElementById('exit').addEventListener('click', async e => {
-    const res = await fetch('/api/exit', {
+    await fetch('/api/exit', {
       method: 'POST'
     })
   })
@@ -60,7 +62,6 @@ window.addEventListener('DOMContentLoaded', async event => {
 
 function setStatus (newStatus) {
   _loadImage = newStatus
-
   _toggleBtn.textContent = toggleButtonText()
 
   if (_loadImage) {
@@ -93,7 +94,6 @@ async function getImg () {
 
     const json = await res.json()
 
-    console.log(res.status)
     if (res.status === 200) {
       _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
       resetTries()

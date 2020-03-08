@@ -2,12 +2,13 @@
   "name": "q",
   "version": "0.0.1",
   "description": "q watcher for ow",
-  "main": "index.js",
   "scripts": {
-    "serve": "npx gulp && node build/run.js",
-    "serve-exe": "npx gulp && node build/run.js",
-    "start": "node dist/run.js",
-    "start-exe": "node dist/run.js"
+    "build": "npx gulp build",
+    "build-exe": "npx gulp",
+    "start": "node build/run.js",
+    "start-exe": "dist\\q.exe",
+    "serve": "npm run build && npm run start",
+    "serve-exe": "npm run build-exe && npm run start-exe"
   },
   "author": "MSz",
   "license": "MIT",

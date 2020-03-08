@@ -1,9 +1,16 @@
 const Server = require('./index.js')
 const qrcode = require('qrcode-terminal')
+const program = require('commander')
+
+program
+  .option('-d, --debug', 'output extra debugging')
+  .option('-p, --port <port>', 'port')
+
+program.parse(process.argv)
 
 const server = new Server({
-  port: 3333,
-  log: true
+  port: program.port,
+  log: program.debug
 })
 
 server.start().then(() => {

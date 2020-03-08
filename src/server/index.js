@@ -11,10 +11,10 @@ const envPaths = require('env-paths')
 
 const randomBytes = util.promisify(crypto.randomBytes)
 
-const paths = envPaths('Q')
+const paths = envPaths('Q', { suffix: '' })
 
 const PORT = 3333
-const INTERVALL = 1000
+const INTERVAL = 1000
 
 const CROP_TYPES = {
   FULL: false,
@@ -25,14 +25,14 @@ class Server {
   constructor (opts) {
     const {
       port,
-      log = true
+      log = false
     } = opts
 
     this.port = parseInt(port) || PORT
     this.ip = ip.address()
-    this.url = `https://${this.ip}:${PORT}`
+    this.url = `https://${this.ip}:${this.port}`
     this.log = Boolean(log)
-    this.intervall = INTERVALL
+    this.interval = INTERVAL
     this.img = null
     this.scActive = false
     this.CROP_TYPES = CROP_TYPES
@@ -54,30 +54,30 @@ class Server {
   }
 
   async initSc () {
-    // if (process.pkg) {
-    await fs.ensureDir(this.binaryPath)
+    if (process.pkg) {
+      await fs.ensureDir(this.binaryPath)
 
-    const files = [
-      'screenCapture_1.3.2.bat',
-      'app.manifest'
-    ]
+      const files = [
+        'screenCapture_1.3.2.bat',
+        'app.manifest'
+      ]
 
-    const oldBinaryPath = path.resolve('node_modules/screenshot-desktop/lib/win32')
+      const oldBinaryPath = path.resolve('node_modules/screenshot-desktop/lib/win32')
 
-    files.forEach(async file => {
-      const oldPath = path.join(oldBinaryPath, file)
-      const newPath = path.join(this.binaryPath, file)
+      files.forEach(async file => {
+        const oldPath = path.join(oldBinaryPath, file)
+        const newPath = path.join(this.binaryPath, file)
 
-      if (!(await fs.pathExists(newPath))) {
-        await copy(oldPath, newPath)
-      }
-    })
+        if (!(await fs.pathExists(newPath))) {
+          await copy(oldPath, newPath)
+        }
+      })
 
-    screenshot.setCWD(this.binaryPath)
-    // }
+      screenshot.setCWD(this.binaryPath)
+    }
 
     if (this.scs) { clearInterval(this.scs) }
-    this.scs = setInterval(this.sc.bind(this), this.intervall)
+    this.scs = setInterval(this.sc.bind(this), this.interval)
   }
 
   async initServer () {
