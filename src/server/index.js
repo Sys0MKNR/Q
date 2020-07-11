@@ -82,6 +82,7 @@ class Server {
 
   async initServer () {
     this.secret = await this.randString(32, 'hex')
+    this.salt = await this.randString(8, 'hex')
     this.uid = await this.randString(16, 'hex')
     this.connectUrl = `${this.url}/q/${this.uid}`
 
@@ -109,7 +110,8 @@ class Server {
     this.server.register(require('fastify-helmet'))
 
     this.server.register(require('fastify-secure-session'), {
-      key: this.secret,
+      secret: this.secret,
+      salt: this.salt,
       cookie: {
         maxAge: 2592000,
         secure: true,
