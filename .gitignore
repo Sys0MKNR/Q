@@ -140,4 +140,4 @@ $RECYCLE.BIN/
 img.jpg
 res
 dist
-build
+build/tmp

@@ -34,7 +34,8 @@
     "rcedit": "^2.2.0",
     "screenshot-desktop": "github:Sys0MKNR/screenshot-desktop",
     "selfsigned": "1.10.7",
-    "sharp": "0.25.4"
+    "sharp": "0.25.4",
+    "unzipper": "^0.10.11"
   },
   "devDependencies": {
     "del": "5.1.0",
