@@ -1,5 +1,6 @@
 const path = require('path')
 const os = require('os')
+const util = require('util')
 const { exec } = require('child_process')
 
 const execP = util.promisify(exec)
@@ -12,7 +13,7 @@ const { exec: pkgExec } = require('pkg')
 
 const pkginfo = require('pkginfo')(module, 'version', 'name', 'description', 'author')
 
-const NODE_VERSION = process.version
+const NODE_VERSION = process.version.slice(1)
 const {
   version: VERSION,
   name: NAME,
@@ -34,12 +35,12 @@ const PKG_CACHE_PATH = path.join(os.homedir(), '.pkg-cache')
 const RH_URL = 'http://www.angusj.com/resourcehacker/resource_hacker.zip'
 const RH_PATH = path.join(BUILD_CACHE, 'rh')
 const RH_PATH_ZIP = RH_PATH + '.zip'
-const RH_PATH_EXE = RH_PATH + '.exe'
+const RH_PATH_EXE = path.join(RH_PATH, 'ResourceHacker.exe')
 
 const BIN_NAME = `fetched-v${NODE_VERSION}-win-x64`
 const BIN_NAME_TEMP = BIN_NAME + '.tmp'
-const BIN_NODE_PATH_ORIGINAL = `${PKG_CACHE_PATH}/v2.6/${BIN_NAME}`
-const BIN_NODE_PATH_TEMP = `${BUILD_TMP}/v2.6/${BIN_NAME_TEMP}`
+const BIN_NODE_PATH_ORIGINAL = path.join(PKG_CACHE_PATH, 'v2.6', BIN_NAME)
+const BIN_NODE_PATH_TEMP = path.join(BUILD_TMP, BIN_NAME_TEMP)
 
 const RC_NAME = 'q.rc'
 const RES_NAME = 'q.res'
@@ -47,31 +48,41 @@ const RC_PATH = path.join(BUILD_TMP, RC_NAME)
 const RES_PATH = path.join(BUILD_TMP, RES_NAME)
 
 async function build () {
+  await fs.ensureDir(BUILD_TMP)
+  await fs.ensureDir(BUILD_CACHE)
+  await fs.ensureDir(RH_PATH)
   await fetchResourceHacker()
   await fetchBinaries()
   await generateRES()
   await editMetaData()
-  await pkgExec([path.join(__dirname, '../', 'package.json'), '--target', 'win', '--output', EXE_PATH])
+  await pkgExec([path.join(__dirname, '../', 'package.json'), '--target', `node${NODE_VERSION}-win`, '--output', EXE_PATH])
   await cleanup()
 }
 
 async function fetchResourceHacker () {
-  if (!fs.exists(RH_PATH_ZIP)) {
+  if (!fs.existsSync(RH_PATH_ZIP)) {
     // dl exe
+    console.log('dl rh')
     const res = await fetch(RH_URL)
-    res.body.pipe(fs.createWriteStream(RH_PATH_ZIP))
+    const out = fs.createWriteStream(RH_PATH_ZIP)
+    res.body.pipe(out)
+
+    const p = new Promise(resolve => out.on('finish', resolve))
+    await p
   }
 
-  if (!fs.exists(RH_PATH_EXE)) {
+  if (!fs.existsSync(RH_PATH_EXE)) {
     // unzip exe
+    console.log('unzip rh')
     fs.createReadStream(RH_PATH_ZIP)
-      .pipe(unzipper.ParseOne('ResourceHacker.exe'))
-      .pipe(unzipper.Extract({ path: RH_PATH_EXE }))
+      // .pipe(unzipper.ParseOne('ResourceHacker.exe'))
+      .pipe(unzipper.Extract({ path: RH_PATH }))
   }
 }
 
 async function fetchBinaries () {
   if (!fs.existsSync(BIN_NODE_PATH_ORIGINAL)) {
+    console.log('dl node bin')
     await pkgfetch.need({ nodeRange: `node${NODE_VERSION}`, platform: 'win', arch: 'x64' })
   }
 }
@@ -106,14 +117,15 @@ async function generateRES () {
 
 async function editMetaData () {
   // copy to temp
-  if (!fs.exists(BIN_NODE_PATH_ORIGINAL)) { throw new Error() }
+  if (!fs.existsSync(BIN_NODE_PATH_ORIGINAL)) { throw new Error() }
   await fs.copyFile(BIN_NODE_PATH_ORIGINAL, BIN_NODE_PATH_TEMP)
 
   // edit metadata
+  await execP(`${RH_PATH_EXE} -open ${BIN_NODE_PATH_ORIGINAL} -resource ${RES_PATH} -action addoverwrite  -save ${BIN_NODE_PATH_ORIGINAL}`)
 
-  const editMetaDataCMD = `-open ${BIN_NODE_PATH_ORIGINAL} -resource ${RES_PATH} -action addoverwrite  -save ${BIN_NODE_PATH_ORIGINAL}`
+  const iconPath = path.join(BUILD_RES_PATH, 'logo.ico')
 
-  await execP(RH_PATH_EXE + editMetaDataCMD)
+  await execP(`${RH_PATH_EXE} -open ${BIN_NODE_PATH_ORIGINAL} -resource ${iconPath} -action addoverwrite -mask ICONGROUP,MAINICON, -save ${BIN_NODE_PATH_ORIGINAL}`)
 }
 
 async function cleanup () {

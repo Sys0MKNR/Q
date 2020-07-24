@@ -1,6 +1,6 @@
 {
   "name": "q",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "q watcher for ow",
   "repository": {
     "type": "git",
@@ -8,13 +8,13 @@
   },
   "license": "MIT",
   "author": "MSz",
-  "bin": "build/run.js",
+  "bin": "build/app/run.js",
   "scripts": {
     "build": "npx gulp build",
     "build-exe": "npx gulp",
     "serve": "npm run build && npm run start",
     "serve-exe": "npm run build-exe && npm run start-exe",
-    "start": "node build/run.js",
+    "start": "node build/app/run.js",
     "start-exe": "dist\\q.exe"
   },
   "dependencies": {
@@ -28,10 +28,9 @@
     "fastify-static": "3.1.0",
     "fs-extra": "9.0.1",
     "ip": "1.1.5",
-    "nexe": "^3.3.7",
+    "node-fetch": "^2.6.0",
     "pkginfo": "0.4.1",
     "qrcode-terminal": "0.12.0",
-    "rcedit": "^2.2.0",
     "screenshot-desktop": "github:Sys0MKNR/screenshot-desktop",
     "selfsigned": "1.10.7",
     "sharp": "0.25.4",
@@ -58,7 +57,7 @@
   "pkg": {
     "assets": [
       "node_modules/sodium-native/prebuilds/**/*",
-      "build/public/**/*"
+      "build/app/public/**/*"
     ]
   }
 }
