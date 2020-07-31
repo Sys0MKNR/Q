@@ -8,13 +8,14 @@ const ip = require('ip')
 const selfsigned = require('selfsigned')
 const fs = require('fs-extra')
 const envPaths = require('env-paths')
+const SC = require('./sc')
 
 const randomBytes = util.promisify(crypto.randomBytes)
 
 const paths = envPaths('Q', { suffix: '' })
 
 const PORT = 36111
-const INTERVAL = 1000
+const FPS = 1
 
 const CROP_TYPES = {
   FULL: false,
@@ -25,59 +26,22 @@ class Server {
   constructor (opts) {
     const {
       port,
-      log = false
+      log = false,
+      fps = FPS
+
     } = opts
 
     this.port = parseInt(port) || PORT
     this.ip = ip.address()
     this.url = `https://${this.ip}:${this.port}`
     this.log = Boolean(log)
-    this.interval = INTERVAL
-    this.img = null
-    this.scActive = false
+
+    this.sc = new SC({ fps })
     this.CROP_TYPES = CROP_TYPES
 
     this.paths = paths
     this.binaryPath = path.join(this.paths.data, 'bin')
     this.httpsPath = path.join(this.paths.data, 'https')
-  }
-
-  async sc () {
-    if (this.scActive) {
-      this.log.info('sc')
-      try {
-        this.img = await screenshot()
-      } catch (err) {
-        this.log.error(err)
-      }
-    }
-  }
-
-  async initSc () {
-    if (process.pkg) {
-      await fs.ensureDir(this.binaryPath)
-
-      const files = [
-        'screenCapture_1.3.2.bat',
-        'app.manifest'
-      ]
-
-      const oldBinaryPath = path.resolve('node_modules/screenshot-desktop/lib/win32')
-
-      files.forEach(async file => {
-        const oldPath = path.join(oldBinaryPath, file)
-        const newPath = path.join(this.binaryPath, file)
-
-        if (!(await fs.pathExists(newPath))) {
-          await copy(oldPath, newPath)
-        }
-      })
-
-      screenshot.setCWD(this.binaryPath)
-    }
-
-    if (this.scs) { clearInterval(this.scs) }
-    this.scs = setInterval(this.sc.bind(this), this.interval)
   }
 
   async initServer () {
@@ -101,7 +65,8 @@ class Server {
     this.log = this.server.log
 
     this.server.register(require('fastify-rate-limit'), {
-      max: 100,
+      keyGenerator (req) { return req.$validUser },
+      max: (req, key) => { return key ? 10000 : 100 },
       timeWindow: '1 minute'
     })
 
@@ -157,7 +122,7 @@ class Server {
   async start () {
     await fs.ensureDir(this.paths.data)
 
-    await this.initSc()
+    await this.sc.init()
     await this.initServer()
 
     try {
@@ -218,7 +183,3 @@ class Server {
 }
 
 module.exports = exports = Server
-
-async function copy (source, target) {
-  fs.createReadStream(source).pipe(fs.createWriteStream(target))
-}

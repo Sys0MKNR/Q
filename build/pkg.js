@@ -51,6 +51,7 @@ async function build () {
   await fs.ensureDir(BUILD_TMP)
   await fs.ensureDir(BUILD_CACHE)
   await fs.ensureDir(RH_PATH)
+
   await fetchResourceHacker()
   await fetchBinaries()
   await generateRES()

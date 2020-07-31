@@ -11,12 +11,14 @@ program
   .version(version)
   .option('-d, --debug', 'output extra debugging')
   .option('-p, --port <port>', 'the used server port')
+  .option('-f, --fps <fps>', 'the fps | max 30')
 
 program.parse(process.argv)
 
 const server = new Server({
   port: program.port,
-  log: program.debug
+  log: program.debug,
+  fps: program.fps
 })
 
 server.start().then(() => {

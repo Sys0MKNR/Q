@@ -9,22 +9,28 @@ module.exports = function route (fastify, opts, next) {
   })
 
   fastify.get('/init', async (request, reply) => {
-    fastify.$server.scActive = true
+    fastify.$server.sc.start()
     reply
       .send({
-        scActive: fastify.$server.scActive,
+        scActive: fastify.$server.sc.active,
         cropTypes: Object.keys(fastify.$server.CROP_TYPES),
-        interval: fastify.$server.interval
+        interval: fastify.$server.sc.interval
       })
   })
 
   fastify.get('/status', async (request, reply) => {
     reply
-      .send({ scActive: fastify.$server.scActive })
+      .send({ scActive: fastify.$server.sc.active })
   })
 
   fastify.post('/status', async (request, reply) => {
-    fastify.$server.scActive = Boolean(request.body.scActive)
+    fastify.$server.sc.active = Boolean(request.body.scActive)
+
+    if (fastify.$server.sc.active) {
+      fastify.$server.sc.start()
+    } else {
+      fastify.$server.sc.stop()
+    }
     reply
       .send('ok')
   })
@@ -32,19 +38,20 @@ module.exports = function route (fastify, opts, next) {
   fastify.post('/exit', async (request, reply) => {
     reply
       .send('ok')
-
     process.exit()
   })
 
   fastify.post('/img', async (request, reply) => {
     try {
-      if (!fastify.$server.img) {
+      if (!fastify.$server.sc.img) {
         return
       }
 
+      fastify.$server.sc.resetCounter()
+
       const cropType = fastify.$server.CROP_TYPES[request.body.cropType]
 
-      let tempImg = Buffer.from(fastify.$server.img)
+      let tempImg = Buffer.from(fastify.$server.sc.img)
 
       if (cropType) {
         tempImg = await sharp(tempImg).extract(cropType).toBuffer()
