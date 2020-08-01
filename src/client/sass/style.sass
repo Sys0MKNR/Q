@@ -98,11 +98,34 @@ select
   cursor: pointer
   
 
+.notif
+  width: 100%
+  min-height: 40px
+  height: 4px
+  flex-grow: 1  
+  color: $accent-color-2
+  @include flex-center
+
+  a
+    font-size: 18px
+
+
+.success
+  background: green
+
+.error
+  background: red
+
+.info
+  background: blue
+
 
 .container
   flex-grow: 1
   width: 100%
-  height: calc(100vh - 80px)
+  height: calc(100vh - 120px)
+
+  // height: calc(100vh - 80px)
 
 
 .connect-container
