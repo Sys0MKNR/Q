@@ -2,14 +2,17 @@ const fs = require('fs-extra')
 const path = require('path')
 
 const screenshot = require('screenshot-desktop')
+const sharp = require('sharp')
 
 const UTIL = require('./util')
+const { EventEmitter } = require('events')
 
 const FPS = 1
 const TIMEOUT = 5
 
-class SC {
+class SC extends EventEmitter {
   constructor (opts) {
+    super()
     const {
       fps = FPS
     } = opts
@@ -77,8 +80,31 @@ class SC {
 
       try {
         this.img = await screenshot()
+        this.emit('sc', this.img)
       } catch (err) {
       }
+    }
+  }
+
+  async getImg (cropType, encoding = 'base64') {
+    try {
+      if (!this.img) {
+        return null
+      }
+
+      this.counter = 0
+
+      const cropTypeDims = this.CROP_TYPES[cropType]
+
+      let tempImg = Buffer.from(this.img)
+
+      if (cropType) {
+        tempImg = await sharp(tempImg).extract(cropTypeDims).toBuffer()
+      }
+
+      return tempImg.toString(encoding)
+    } catch (error) {
+      console.error(error)
     }
   }
 }

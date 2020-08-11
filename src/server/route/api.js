@@ -1,68 +1,72 @@
-const sharp = require('sharp')
+const UTIL = require('../util')
+const { Packet } = require('../data')
 
 module.exports = function route (fastify, opts, next) {
-  fastify.addHook('preHandler', (request, reply, next) => {
-    if (!request.$validUser) {
+  fastify.addHook('preHandler', (req, reply, next) => {
+    if (!req.$validUser) {
       reply.unauthorized()
     }
     next()
   })
 
-  fastify.get('/init', async (request, reply) => {
+  fastify.get('/init', async (req, reply) => {
     fastify.$server.sc.start()
     reply
       .send({
         scActive: fastify.$server.sc.active,
         cropTypes: Object.keys(fastify.$server.CROP_TYPES),
         interval: fastify.$server.sc.interval
+
       })
   })
 
-  fastify.get('/status', async (request, reply) => {
+  fastify.get('/status', async (req, reply) => {
     reply
       .send({ scActive: fastify.$server.sc.active })
   })
 
-  fastify.post('/status', async (request, reply) => {
-    fastify.$server.sc.active = Boolean(request.body.scActive)
-
-    if (fastify.$server.sc.active) {
-      fastify.$server.sc.start()
-    } else {
-      fastify.$server.sc.stop()
-    }
+  fastify.post('/status', async (req, reply) => {
     reply
       .send('ok')
   })
 
-  fastify.post('/exit', async (request, reply) => {
+  fastify.post('/exit', async (req, reply) => {
     reply
       .send('ok')
     process.exit()
   })
 
-  fastify.post('/img', async (request, reply) => {
-    try {
-      if (!fastify.$server.sc.img) {
-        return
+  fastify.post('/ws', { websocket: true }, async (conn, req) => {
+    conn.socket.on('message', async msg => {
+      try {
+        const packet = JSON.parse(msg)
+        handleWS[packet.cmd](fastify, conn, packet)
+      } catch (error) {
+
       }
-
-      fastify.$server.sc.resetCounter()
-
-      const cropType = fastify.$server.CROP_TYPES[request.body.cropType]
-
-      let tempImg = Buffer.from(fastify.$server.sc.img)
-
-      if (cropType) {
-        tempImg = await sharp(tempImg).extract(cropType).toBuffer()
-      }
-
-      reply
-        .send({ data: tempImg.toString('base64') })
-    } catch (error) {
-      console.error(error)
-    }
+    })
   })
 
   next()
+}
+
+const handleWS = {
+  async STATUS_GET (fastify, conn, packet) {
+    conn.socket.send(new Packet({
+      type: 'STATUS_GET',
+      data: fastify.$server.sc.active
+    }))
+  },
+  async STATUS_SET (fastify, conn, packet) {
+    fastify.$server.sc.active = Boolean(packet.data)
+    if (fastify.$server.sc.active) {
+      fastify.$server.sc.start()
+    } else {
+      fastify.$server.sc.stop()
+    }
+  },
+  async IMG (fastify, conn, packet) {
+    console.log(conn)
+    console.log(conn.socket)
+  }
 }

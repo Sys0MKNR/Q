@@ -10,7 +10,7 @@ const fs = require('fs-extra')
 const envPaths = require('env-paths')
 const SC = require('./sc')
 
-const randomBytes = util.promisify(crypto.randomBytes)
+const UTIL = require('./util')
 
 const paths = envPaths('Q', { suffix: '' })
 
@@ -42,12 +42,14 @@ class Server {
     this.paths = paths
     this.binaryPath = path.join(this.paths.data, 'bin')
     this.httpsPath = path.join(this.paths.data, 'https')
+
+    this.clients = new Map()
   }
 
   async initServer () {
-    this.secret = await this.randString(32, 'hex')
-    this.salt = await this.randString(8, 'hex')
-    this.uid = await this.randString(16, 'hex')
+    this.secret = await UTIL.randString(32, 'hex')
+    this.salt = await UTIL.randString(8, 'hex')
+    this.uid = await UTIL.randString(16, 'hex')
     this.connectUrl = `${this.url}/q/${this.uid}`
 
     this.keys = await this.createKeysAndCert(path)
@@ -91,20 +93,28 @@ class Server {
 
     this.server.decorateRequest('$validUser', null)
 
-    this.server.addHook('preHandler', (request, reply, done) => {
-      const token = request.session.get('token')
-      const valid = Boolean(token) && (token === request.$server.uid)
-      request.$validUser = valid
+    this.server.addHook('preHandler', (req, reply, done) => {
+      const token = req.session.get('token')
+      const valid = Boolean(token) && (token === req.$server.uid)
+      req.$validUser = valid
       done()
     })
 
     this.server.register(require('./route/q'), { prefix: '/q' })
     this.server.register(require('./route/api'), { prefix: '/api' })
 
-    this.server.setNotFoundHandler((request, reply) => {
-      if (request.raw.url === '/') {
-        if (request.$validUser) {
-          reply.redirect('/q/' + request.$server.uid)
+    fastify.register(require('fastify-websocket'), {
+      options: {
+        verifyClient: (info, next) => {
+          return next(info.req.req.$validUser)
+        }
+      }
+    })
+
+    this.server.setNotFoundHandler((req, reply) => {
+      if (req.raw.url === '/') {
+        if (req.$validUser) {
+          reply.redirect('/q/' + req.$server.uid)
         } else {
           reply.sendFile('html/connect.html')
         }
@@ -113,7 +123,7 @@ class Server {
       }
     })
 
-    this.server.setErrorHandler((error, request, reply) => {
+    this.server.setErrorHandler((error, req, reply) => {
       this.log.error(error)
       reply.internalServerError()
     })
