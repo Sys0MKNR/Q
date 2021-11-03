@@ -13,7 +13,9 @@ const { exec: pkgExec } = require('pkg')
 
 const pkginfo = require('pkginfo')(module, 'version', 'name', 'description', 'author')
 
-const NODE_VERSION = process.version.slice(1)
+// const NODE_VERSION = process.version.slice(1)
+const NODE_VERSION = process.versions.node.split('.')[0]
+
 const {
   version: VERSION,
   name: NAME,

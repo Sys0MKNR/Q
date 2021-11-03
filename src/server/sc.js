@@ -2,13 +2,28 @@ const fs = require('fs-extra')
 const path = require('path')
 
 const screenshot = require('screenshot-desktop')
-const sharp = require('sharp')
+// const sharp = require('sharp')
+
+// const jimp = require('jimp')
 
 const UTIL = require('./util')
 const { EventEmitter } = require('events')
+const { ImgPacket } = require('./dto')
 
 const FPS = 1
 const TIMEOUT = 5
+
+
+class SCClient {
+  static ID = 0
+
+  constructor(conn){
+    this.id = SCClient.ID++
+    this.conn = conn
+    this.imgActive = false
+  }
+
+}
 
 class SC extends EventEmitter {
   constructor (opts) {
@@ -23,6 +38,7 @@ class SC extends EventEmitter {
     this.active = false
     this.counter = 0
     this.runner = null
+    this.clients = new Map()
   }
 
   async init () {
@@ -47,6 +63,27 @@ class SC extends EventEmitter {
 
       screenshot.setCWD(this.binaryPath)
     }
+
+    this.on('sc', async ()=>{
+
+      if(this.clients.size > 0 ){
+
+        const img = await this.getImg()
+        for(const c of this.clients.values()){
+          try {            
+            c.conn.socket.send(JSON.stringify(new ImgPacket({
+              type: ImgPacket.TYPE.DATA,
+              payload: img
+            })))
+          } catch (error) {
+            console.error(error)
+            this.removeClient(c.id)
+          }
+        }
+      } else {
+        this.stop()
+      }
+    })
   }
 
   resetCounter () {
@@ -94,19 +131,37 @@ class SC extends EventEmitter {
 
       this.counter = 0
 
-      const cropTypeDims = this.CROP_TYPES[cropType]
+      // const cropTypeDims = this.CROP_TYPES[cropType]
 
-      let tempImg = Buffer.from(this.img)
+      const tempImg = Buffer.from(this.img)
 
-      if (cropType) {
-        tempImg = await sharp(tempImg).extract(cropTypeDims).toBuffer()
-      }
+      // if (cropType) {
+        // const img = await jimp.read(tempImg)
+
+        // tempImg = await sharp(tempImg).extract(cropTypeDims).toBuffer()
+      // }
 
       return tempImg.toString(encoding)
     } catch (error) {
       console.error(error)
     }
   }
+
+
+  async addClient(conn, req){
+    const client = new SCClient(conn)
+    this.clients.set(client.id, client)
+    req.session.set('SCClientID', client.id)
+    this.start()
+    
+  }
+
+  async removeClient(clientID){
+    this.clients.delete(clientID)
+  } 
+
+
+
 }
 
 module.exports = SC

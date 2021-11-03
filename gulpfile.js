@@ -3,15 +3,15 @@ const util = require('util')
 
 const { src, dest, parallel, series } = require('gulp')
 const pug = require('gulp-pug')
-const sass = require('gulp-sass')
+const sass = require('gulp-sass')(require('sass'))
 const minifyCSS = require('gulp-csso')
 const uglify = require('gulp-terser')
 const gulpCopy = require('gulp-copy')
 const del = require('del')
 
-const runPKG = require('./build/pkg.js')
+// const runPKG = require('./build/pkg.js')
 
-const BUILD_DIR = 'build'
+const BUILD_DIR = '.build'
 const BUILD_TMP = path.join(BUILD_DIR, '.tmp')
 const DIST_DIR = 'dist'
 
@@ -26,7 +26,12 @@ async function clean () {
 }
 
 async function pkg () {
-  await runPKG()
+  // await runPKG()
+}
+
+function shared () {
+  return src('src/shared/**/*')
+    .pipe(gulpCopy(BUILD_APP_DIR, { prefix: 1 }))
 }
 
 function server () {
@@ -60,5 +65,5 @@ function font () {
 
 exports.clean = clean
 exports.client = parallel(html, css, js, font)
-exports.build = series(clean, server, exports.client)
+exports.build = series(clean, shared, server, exports.client)
 exports.default = series(exports.build, pkg)

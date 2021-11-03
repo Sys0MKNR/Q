@@ -142,3 +142,7 @@ dist
 build/app
 build/.cache
 build/.tmp
+
+.build
+
+t

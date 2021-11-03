@@ -1,8 +1,5 @@
 const path = require('path')
-const util = require('util')
-const crypto = require('crypto')
 
-const screenshot = require('screenshot-desktop')
 const fastify = require('fastify')
 const ip = require('ip')
 const selfsigned = require('selfsigned')
@@ -21,6 +18,7 @@ const CROP_TYPES = {
   FULL: false,
   OW_STD: { left: 809, top: 44, width: 302, height: 88 }
 }
+
 
 class Server {
   constructor (opts) {
@@ -56,6 +54,7 @@ class Server {
 
     this.server = fastify({
       logger: this.log,
+      // logger: true,
       https: {
         key: this.keys.key,
         cert: this.keys.cert
@@ -65,6 +64,10 @@ class Server {
     this.server.decorate('$server', this)
     this.server.decorateRequest('$server', this)
     this.log = this.server.log
+
+    this.wsClients = new Map()
+
+
 
     this.server.register(require('fastify-rate-limit'), {
       keyGenerator (req) { return req.$validUser },
@@ -86,6 +89,14 @@ class Server {
       }
     })
 
+    this.server.register(require('fastify-websocket'), {
+      options: {
+        // verifyClient: (info, next) => {
+        //   return next(validateUser(info.req))
+        // }
+      }
+    })
+
     this.server.register(require('fastify-static'), {
       root: path.join(__dirname, './public'),
       prefix: '/public/'
@@ -94,22 +105,14 @@ class Server {
     this.server.decorateRequest('$validUser', null)
 
     this.server.addHook('preHandler', (req, reply, done) => {
-      const token = req.session.get('token')
-      const valid = Boolean(token) && (token === req.$server.uid)
-      req.$validUser = valid
+      req.$validUser = validateUser(req)
       done()
     })
 
     this.server.register(require('./route/q'), { prefix: '/q' })
     this.server.register(require('./route/api'), { prefix: '/api' })
 
-    fastify.register(require('fastify-websocket'), {
-      options: {
-        verifyClient: (info, next) => {
-          return next(info.req.req.$validUser)
-        }
-      }
-    })
+
 
     this.server.setNotFoundHandler((req, reply) => {
       if (req.raw.url === '/') {
@@ -156,9 +159,11 @@ class Server {
     const keysExist = await fs.pathExists(keyPath) && await fs.pathExists(certPath)
 
     if (keysExist) {
+
       key = await fs.readFile(keyPath)
       cert = await fs.readFile(certPath)
     } else {
+
       const result = await this.createSelfSignedCert()
 
       key = result.key
@@ -190,6 +195,14 @@ class Server {
     const bytes = await randomBytes(length)
     return encoding ? bytes.toString(encoding) : bytes.toString()
   }
+}
+
+
+
+function validateUser(req){
+  const token = req.session.get('token')
+  const valid = Boolean(token) && (token === req.$server.uid)
+  return valid
 }
 
 module.exports = exports = Server

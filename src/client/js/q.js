@@ -1,113 +1,107 @@
-let _imageLoader
-let _loadImage = false
+
+let _fetchImg = false
 let _img
-let _interval = 1000
 let _toggleBtn
-let _tries = 5
-let _cropTypeSelect
-let _cropType = 'FULL'
+let _socket
+
 
 window.addEventListener('DOMContentLoaded', async event => {
-  const res = await fetch('/api/init')
+  connectToWs()
 
-  if (res.status !== 200) { return }
-
-  const { scActive, url, interval, cropTypes } = await res.json()
-
-  console.log({ scActive, url, interval, cropTypes })
-
-  _loadImage = scActive
-  _interval = interval || 1000
   _toggleBtn = document.getElementById('toggle')
   _toggleBtn.textContent = toggleButtonText()
-  _cropTypeSelect = document.getElementById('cropTypes')
-
-  _cropTypeSelect.addEventListener('change', e => {
-    _cropType = e.target.value
-  })
-
-  cropTypes.forEach(x => {
-    const option = document.createElement('option')
-    option.text = x
-    _cropTypeSelect.add(option)
-  })
 
   _toggleBtn.addEventListener('click', async e => {
-    setStatus(!_loadImage)
+    if(_fetchImg){
+      stopImgFetch()
+    } else {
+      startImgFetch()
+    }
+    setStatus(!_fetchImg)
+ 
+  })
 
-    try {
-      await fetch('/api/status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ scActive: _loadImage })
-      })
-    } catch (error) {
-      setStatus(false)
-      console.error(error)
+  // document.getElementById('exit').addEventListener('click', async e => {
+  //   await fetch('/api/exit', {
+  //     method: 'POST'
+  //   })
+  // })
+
+})
+
+
+function connectToWs(){
+  const loc = window.location
+  const wssUri = `${loc.origin.replace('http', 'ws')}/api/ws`
+
+  _socket = new WebSocket(wssUri)
+  _img = document.getElementById('img')
+
+  _socket.addEventListener('open', function (event) {
+    console.log('connected to ws')
+
+    startImgFetch()
+    setStatus(true)
+
+  })
+
+  // Listen for messages
+  _socket.addEventListener('message', function (event) {
+      console.log('Message from server ', event.data)
+
+      const packet = JSON.parse(event.data)
+
+      if(packet.type === 'data'){
+        _img.setAttribute('src', 'data:image/jpeg;base64,' + packet.payload)
+      }
+  })
+
+  _socket.addEventListener('error', err=>{
+    console.error(err)
+  })
+
+  
+  _socket.addEventListener('close', ()=>{
+    console.log('close')
+  })
+
+}
+
+
+function startImgFetch(){
+
+  sendJSONoverSocket({
+    type: 'IMG',
+    payload: {
+      type: 'start'
     }
   })
 
-  document.getElementById('exit').addEventListener('click', async e => {
-    await fetch('/api/exit', {
-      method: 'POST'
-    })
+}
+
+
+function stopImgFetch(){
+  sendJSONoverSocket({
+    type: 'IMG',
+    payload: {
+      type: 'stop'
+    }
   })
+}
 
-  _img = document.getElementById('img')
 
-  _imageLoader = getImgWorker()
-})
+function sendJSONoverSocket(data){
+  _socket.send(JSON.stringify(data))
+}
+
 
 function setStatus (newStatus) {
-  _loadImage = newStatus
+  _fetchImg = newStatus
   _toggleBtn.textContent = toggleButtonText()
-
-  if (_loadImage) {
-    resetTries()
-    _imageLoader = getImgWorker()
-  } else clearInterval(_imageLoader)
 }
 
-function getImgWorker () {
-  getImg()
-  return setInterval(getImg, _interval)
-}
 
-async function getImg () {
-  if (!_loadImage) return
-
-  if (_tries <= 0) {
-    setStatus(false)
-    return
-  }
-
-  try {
-    const res = await fetch('/api/img', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ cropType: _cropType })
-    })
-
-    const json = await res.json()
-
-    if (res.status === 200) {
-      _img.setAttribute('src', 'data:image/jpeg;base64,' + json.data)
-      resetTries()
-    } else { throw new Error('not 200') }
-  } catch (error) {
-    _tries--
-    console.error(error)
-  }
-}
-
-function resetTries () {
-  _tries = 5
-}
 
 function toggleButtonText () {
-  return _loadImage ? 'Stop' : 'Start'
+  return _fetchImg ? 'Stop' : 'Start'
 }

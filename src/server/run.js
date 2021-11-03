@@ -15,18 +15,25 @@ program
 
 program.parse(process.argv)
 
+const opts = program.opts()
+
 const server = new Server({
-  port: program.port,
-  log: program.debug,
-  fps: program.fps
+  port: opts.port,
+  log: opts.debug,
+  fps: opts.fps
 })
 
 server.start().then(() => {
-  console.log('Version: ' + version)
-  console.log('Server started at: ' + server.url)
-  console.log('direct connect url: ' + server.connectUrl)
-  qrcode.generate(server.connectUrl, { small: true })
-  console.log('source code: ' + repository.url)
+
+  if(!opts.debug){
+    console.log('Version: ' + version)
+    console.log('Log: ' + opts.debug)
+    console.log('Server started at: ' + server.url)
+    console.log('direct connect url: ' + server.connectUrl)
+    qrcode.generate(server.connectUrl, { small: true })
+    console.log('source code: ' + repository.url)
+  }
+
 }).catch(err => {
   console.error(err)
 })

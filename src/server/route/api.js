@@ -1,5 +1,7 @@
 const UTIL = require('../util')
-const { Packet } = require('../data')
+// const { Packet } = require('../data')
+
+const { WSPacket, ImgPacket, WSError } = require('../shared/dto')
 
 module.exports = function route (fastify, opts, next) {
   fastify.addHook('preHandler', (req, reply, next) => {
@@ -9,26 +11,6 @@ module.exports = function route (fastify, opts, next) {
     next()
   })
 
-  fastify.get('/init', async (req, reply) => {
-    fastify.$server.sc.start()
-    reply
-      .send({
-        scActive: fastify.$server.sc.active,
-        cropTypes: Object.keys(fastify.$server.CROP_TYPES),
-        interval: fastify.$server.sc.interval
-
-      })
-  })
-
-  fastify.get('/status', async (req, reply) => {
-    reply
-      .send({ scActive: fastify.$server.sc.active })
-  })
-
-  fastify.post('/status', async (req, reply) => {
-    reply
-      .send('ok')
-  })
 
   fastify.post('/exit', async (req, reply) => {
     reply
@@ -36,37 +18,46 @@ module.exports = function route (fastify, opts, next) {
     process.exit()
   })
 
-  fastify.post('/ws', { websocket: true }, async (conn, req) => {
+  fastify.get('/ws', { websocket: true }, (conn, req) => {
+
     conn.socket.on('message', async msg => {
       try {
-        const packet = JSON.parse(msg)
-        handleWS[packet.cmd](fastify, conn, packet)
-      } catch (error) {
+        const packet = new WSPacket(JSON.parse(msg))
+        fastify.$server.log.info(packet)
 
+      
+        if (packet.type in WSPacket.TYPE){
+          handleWS[packet.type](fastify, conn, req, packet)
+        } else {
+          conn.socket.send(JSON.stringify(new WSError('bad msg type')))
+        }
+
+
+      } catch (error) {
+        conn.socket.send(JSON.stringify(new WSError('bad msg')))
+        console.error(error)
       }
     })
+
   })
 
   next()
 }
 
 const handleWS = {
-  async STATUS_GET (fastify, conn, packet) {
-    conn.socket.send(new Packet({
-      type: 'STATUS_GET',
-      data: fastify.$server.sc.active
-    }))
-  },
-  async STATUS_SET (fastify, conn, packet) {
-    fastify.$server.sc.active = Boolean(packet.data)
-    if (fastify.$server.sc.active) {
-      fastify.$server.sc.start()
-    } else {
-      fastify.$server.sc.stop()
+
+  async IMG (fastify, conn, req, packet) {
+    const payload = packet.payload
+
+    if(payload.type === ImgPacket.TYPE.START){
+      fastify.$server.sc.addClient(conn, req)
+      
+    } else if(payload.type === ImgPacket.TYPE.STOP){    
+      const id = req.session.get('SCClientID')
+      fastify.$server.sc.removeClient(id)
+
     }
-  },
-  async IMG (fastify, conn, packet) {
-    console.log(conn)
-    console.log(conn.socket)
+    
+
   }
 }
